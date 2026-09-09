@@ -1,16 +1,41 @@
 # Environment
 .env
+.env.*
+!.env.example
 
 # Go build artifacts
 /bin/
 /dist/
 *.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
 *.test
+
+# Coverage output
 *.out
+coverage.txt
+coverage.html
+
+# Go workspace file (kalau nanti pakai multi-module workspace)
+go.work
+go.work.sum
+
+# Dependency directory (belum di-vendor sekarang, exclude kalau nanti `go mod vendor`)
+/vendor/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
