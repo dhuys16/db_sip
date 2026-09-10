@@ -1,14 +1,17 @@
 package models
 
-import "gorm.io/gorm"
+import "time"
 
-// Blog menampung konten blog/berita untuk kedua divisi (lazsip & sarsip),
-// dibedakan lewat kolom Divisi, bukan tabel terpisah.
-// Field masih minimal, akan dilengkapi di iterasi skema berikutnya.
 type Blog struct {
-	gorm.Model
-	Divisi string `gorm:"size:20;not null;index"`
-	Judul  string `gorm:"size:255;not null"`
-	Slug   string `gorm:"size:255;uniqueIndex;not null"`
-	Konten string `gorm:"type:text"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Title     string    `gorm:"type:varchar(255);not null" json:"title"`
+	Slug      string    `gorm:"type:varchar(255);unique;not null" json:"slug"`
+	Content   string    `gorm:"type:text;not null" json:"content"`
+	ImageURL  string    `gorm:"type:varchar(255)" json:"image_url"`
+	Division  string    `gorm:"type:enum('lazsip', 'sarsip');not null" json:"division"`
+	IsPinned  bool      `gorm:"default:false" json:"is_pinned"`
+	AdminID   uint      `gorm:"not null" json:"admin_id"`
+	Admin     Admin     `gorm:"foreignKey:AdminID" json:"admin"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

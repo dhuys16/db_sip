@@ -2,33 +2,43 @@ package routes
 
 import (
 	"db_sip/internal/handlers"
+	"db_sip/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-// SetupRoutes mendaftarkan seluruh route API, dikelompokkan per versi lalu
-// per akses (public / admin / webhook).
 func SetupRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 	{
-		v1.GET("/ping", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "pong"})
-		})
-
+		// 1. Endpoint Publik
 		public := v1.Group("/public")
 		{
-			campaigns := public.Group("/campaigns")
-			{
-				campaigns.GET("", handlers.GetCampaigns)
-			}
+			public.GET("/ping", func(c *gin.Context) {
+				c.JSON(200, gin.H{"message": "API SIP Public OK"})
+			})
+			
+			// Routes Read-Only untuk Frontend
+			public.GET("/campaigns", handlers.GetCampaignsPublic)
+			public.GET("/blogs", handlers.GetBlogsPublic)
+			public.GET("/beneficiaries", handlers.GetBeneficiariesPublic)
 		}
 
-		// admin := v1.Group("/admin")
-		// TODO: pasang middleware auth JWT di sini setelah dibuat, baru
-		// daftarkan route admin (CRUD blog/campaign/dst, full-column beneficiaries).
+		// 2. Endpoint Auth
+		auth := v1.Group("/auth")
+		{
+			auth.POST("/login", handlers.AdminLogin)
+		}
 
-		// webhook := v1.Group("/webhook")
-		// TODO: route webhook Midtrans setelah service pembayaran dibuat -
-		// wajib verifikasi signature sebelum ubah status transaction.
+		// 3. Endpoint Admin (Protected)
+		admin := v1.Group("/admin")
+		admin.Use(middleware.AuthMiddleware())
+		{
+			admin.GET("/me", func(c *gin.Context) {
+				adminID, _ := c.Get("admin_id")
+				c.JSON(200, gin.H{"admin_id": adminID, "message": "Token valid!"})
+			})
+			
+			// TODO: CRUD Endpoint untuk Admin akan ditambahkan di sini
+		}
 	}
 }

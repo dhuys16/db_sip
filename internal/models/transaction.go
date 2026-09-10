@@ -1,17 +1,26 @@
 package models
 
-import "gorm.io/gorm"
+import "time"
 
-// Transaction menampung transaksi donasi maupun zakat dalam satu tabel,
-// dibedakan lewat kolom Tipe. Status HANYA boleh diubah lewat handler
-// webhook payment gateway setelah verifikasi signature - tidak pernah
-// dari request pengguna (redirect sukses, dsb).
-// Field masih minimal, akan dilengkapi di iterasi skema berikutnya.
 type Transaction struct {
-	gorm.Model
-	Tipe       string  `gorm:"size:20;not null"` // "donasi" | "zakat"
-	CampaignID *uint   `gorm:"index"`            // nullable, kosong kalau tipe zakat
-	DonorID    uint    `gorm:"not null;index"`
-	Nominal    float64 `gorm:"not null"`
-	Status     string  `gorm:"size:20;not null;default:pending"`
+	ID              uint       `gorm:"primaryKey" json:"id"`
+	MidtransOrderID string     `gorm:"type:varchar(100);unique;not null" json:"midtrans_order_id"`
+	CampaignID      *uint      `json:"campaign_id"` // Nullable jika donasi umum/zakat
+	Campaign        Campaign   `gorm:"foreignKey:CampaignID" json:"campaign"`
+	DonorID         uint       `gorm:"not null" json:"donor_id"`
+	Donor           Donor      `gorm:"foreignKey:DonorID" json:"donor"`
+	
+	TransactionType string     `gorm:"type:enum('donasi', 'zakat', 'infaq');default:'donasi'" json:"transaction_type"`
+	GrossAmount     float64    `gorm:"type:decimal(15,2);not null" json:"gross_amount"` // Total bayar donatur
+	BiayaAdmin      float64    `gorm:"type:decimal(15,2);default:0" json:"biaya_admin"` // Potongan gateway
+	NetAmount       float64    `gorm:"type:decimal(15,2);not null" json:"net_amount"`   // Masuk ke kas SIP
+	
+	PaymentType     string     `gorm:"type:varchar(50)" json:"payment_type"`
+	Status          string     `gorm:"type:enum('pending', 'paid', 'failed', 'expired');default:'pending'" json:"status"`
+	SnapToken       string     `gorm:"type:varchar(255)" json:"snap_token"`
+	
+	Notes           string     `gorm:"type:text" json:"notes"` // Pesan doa dari donatur
+	PaidAt          *time.Time `json:"paid_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }

@@ -5,29 +5,34 @@ import (
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
 
-// ConnectDatabase membuka koneksi GORM ke MySQL memakai kredensial dari
-// environment variable (DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME).
-// Panggil config.LoadEnv() dulu sebelum ini kalau kredensialnya dari file .env.
 func ConnectDatabase() {
+	// Load .env file (hanya jika ada, untuk environment production biasanya langsung dari OS)
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Peringatan: File .env tidak ditemukan, menggunakan variabel environment OS.")
+	}
+
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASS")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
+
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASS"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+		dbUser, dbPass, dbHost, dbPort, dbName)
 
 	database, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Gagal terkoneksi ke database:", err)
+		log.Fatalf("Gagal terkoneksi ke database MySQL: %v", err)
 	}
 
 	DB = database
-	fmt.Println("Koneksi database berhasil!")
+	log.Println("Koneksi ke database MySQL berhasil!")
 }
