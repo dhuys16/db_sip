@@ -22,8 +22,11 @@ func main() {
 	// 3. Inisialisasi Router Gin
 	r := gin.Default()
 
+	// Serve file hasil upload (gambar) supaya bisa diakses lewat /uploads/<nama_file>
+	r.Static("/uploads", "./uploads")
+
 	// Tambahkan middleware CORS jika frontend (Next.js) berjalan di port berbeda saat development
-	// r.Use(corsMiddleware()) 
+	// r.Use(corsMiddleware())
 
 	// 4. Setup Routes (Publik, Admin, Webhook)
 	routes.SetupRoutes(r)

@@ -50,3 +50,9 @@ func AdminLogin(c *gin.Context) {
 		},
 	})
 }
+
+func AdminLogout(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logout berhasil",
+	})
+}
