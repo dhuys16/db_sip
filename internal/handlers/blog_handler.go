@@ -22,7 +22,8 @@ type BlogRequest struct {
 	Content    string                `form:"content" binding:"required"`
 	Division   string                `form:"division" binding:"required,oneof=lazsip sarsip"`
 	Category   string                `form:"category"`    // opsional, bebas isi (misal kategori laporan lapangan SARSIP)
-	CampaignID *uint                 `form:"campaign_id"` // opsional, nullable
+	CampaignID *uint                 `form:"campaign_id"` // opsional, nullabl
+	Status     string                `form:"status"`      // opsional, bebas isi (misal kategori laporan lapangan SARSIP)
 	IsPinned   bool                  `form:"is_pinned"`
 	Image      *multipart.FileHeader `form:"image"` // opsional
 }
@@ -60,7 +61,49 @@ func GetBlogBySlugPublic(c *gin.Context) {
 	var blog models.Blog
 	err := config.DB.Preload("Admin", func(db *gorm.DB) *gorm.DB {
 		return db.Select("ID, Name")
-	}).Preload("Campaign").Where("slug = ?", slug).First(&blog).Error
+	}).Preload("Campaign").
+		Where("slug = ? AND status = ?", slug, "published").
+		First(&blog).Error
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Blog tidak ditemukan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": blog})
+}
+
+func GetBlogsAdmin(c *gin.Context) {
+	var blogs []models.Blog
+	division := c.Query("division")
+	status := c.Query("status")
+
+	query := config.DB.Preload("Admin", func(db *gorm.DB) *gorm.DB {
+		return db.Select("ID, Name")
+	}).Preload("Campaign").Order("created_at desc")
+
+	if division != "" {
+		query = query.Where("division = ?", division)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	if err := query.Find(&blogs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data blog"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": blogs})
+}
+
+func GetBlogByIDAdmin(c *gin.Context) {
+	id := c.Param("id")
+
+	var blog models.Blog
+	err := config.DB.Preload("Admin", func(db *gorm.DB) *gorm.DB {
+		return db.Select("ID, Name")
+	}).Preload("Campaign").First(&blog, id).Error
 
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Blog tidak ditemukan"})
@@ -105,6 +148,10 @@ func CreateBlog(c *gin.Context) {
 		return
 	}
 
+	if req.Status == "" {
+		req.Status = "published"
+	}
+
 	var imageURL string
 	if req.Image != nil {
 		imageURL, err = saveImageFile(c, req.Image)
@@ -122,6 +169,7 @@ func CreateBlog(c *gin.Context) {
 		Division:   req.Division,
 		Category:   req.Category,
 		CampaignID: req.CampaignID,
+		Status:     req.Status,
 		IsPinned:   req.IsPinned,
 		AdminID:    adminID,
 	}
@@ -167,11 +215,16 @@ func UpdateBlog(c *gin.Context) {
 		}
 	}
 
+	if req.Status == "" {
+		req.Status = "published"
+	}
+
 	blog.Title = req.Title
 	blog.Content = req.Content
 	blog.Division = req.Division
 	blog.Category = req.Category
 	blog.CampaignID = req.CampaignID
+	blog.Status = req.Status
 	blog.IsPinned = req.IsPinned
 
 	if req.Image != nil {

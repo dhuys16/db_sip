@@ -12,6 +12,7 @@ type Blog struct {
 	CampaignID *uint     `json:"campaign_id"`                      // opsional, nullable
 	Campaign   Campaign  `gorm:"foreignKey:CampaignID" json:"campaign"`
 	Division   string    `gorm:"type:enum('lazsip', 'sarsip');not null" json:"division"`
+	Status     string    `gorm:"type:enum('draft', 'published');default:'published'" json:"status"`
 	IsPinned   bool      `gorm:"default:false" json:"is_pinned"`
 	AdminID    uint      `gorm:"not null" json:"admin_id"`
 	Admin      Admin     `gorm:"foreignKey:AdminID" json:"admin"`

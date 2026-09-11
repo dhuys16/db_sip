@@ -16,17 +16,20 @@ func SetupRoutes(r *gin.Engine) {
 			public.GET("/ping", func(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "API SIP Public OK"})
 			})
-
+			
+			// Routes Read-Only untuk Frontend
+			public.GET("/campaigns", handlers.GetCampaignsPublic)
 			public.GET("/blogs", handlers.GetBlogsPublic)
-			public.GET("/blogs/:slug", handlers.GetBlogBySlugPublic)
 			public.GET("/beneficiaries", handlers.GetBeneficiariesPublic)
 			public.GET("/beneficiaries/:id", handlers.GetBeneficiaryDetailPublic)
 			public.GET("/activities", handlers.GetActivitiesPublic)
 			public.GET("/activities/:slug", handlers.GetActivityBySlugPublic)
-			public.GET("/campaigns", handlers.GetCampaignsPublic)
+			public.GET("/blogs/:slug", handlers.GetBlogBySlugPublic)
 			public.GET("/campaigns/:slug", handlers.GetCampaignBySlugPublic)
 			public.GET("/programs", handlers.GetProgramsPublic)
 			public.GET("/programs/:slug", handlers.GetProgramBySlugPublic)
+
+			// Simulasi Donasi (belum ada payment gateway asli)
 			public.POST("/donations", handlers.CreateDonation)
 			public.GET("/donations/:order_id", handlers.GetDonationStatusPublic)
 		}
@@ -35,7 +38,7 @@ func SetupRoutes(r *gin.Engine) {
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/login", handlers.AdminLogin)
-		}	
+		}
 
 		// 3. Endpoint Admin (Protected)
 		admin := v1.Group("/admin")
@@ -45,20 +48,26 @@ func SetupRoutes(r *gin.Engine) {
 				adminID, _ := c.Get("admin_id")
 				c.JSON(200, gin.H{"admin_id": adminID, "message": "Token valid!"})
 			})
+
 			admin.POST("/logout", handlers.AdminLogout)
 
-			// CRUD Activity
+			// Upload gambar (dipakai buat isi field image_url resource lain)
+			admin.POST("/upload", handlers.UploadImage)
+
+			// CRUD Activity (Create, Update, Delete - butuh login admin)
 			admin.POST("/activities", handlers.CreateActivity)
 			admin.PUT("/activities/:slug", handlers.UpdateActivity)
 			admin.DELETE("/activities/:slug", handlers.DeleteActivity)
-			admin.POST("/upload", handlers.UploadImage)
 
 			// CRUD Blog (Create, Update, Delete - butuh login admin)
+			admin.GET("/blogs", handlers.GetBlogsAdmin)
+			admin.GET("/blogs/:id", handlers.GetBlogByIDAdmin)
 			admin.POST("/blogs", handlers.CreateBlog)
 			admin.PUT("/blogs/:slug", handlers.UpdateBlog)
 			admin.DELETE("/blogs/:slug", handlers.DeleteBlog)
 
 			// CRUD Campaign (Create, Update, Delete - butuh login admin)
+			admin.GET("/campaigns", handlers.GetCampaignsAdmin)
 			admin.POST("/campaigns", handlers.CreateCampaign)
 			admin.PUT("/campaigns/:slug", handlers.UpdateCampaign)
 			admin.DELETE("/campaigns/:slug", handlers.DeleteCampaign)
@@ -69,7 +78,7 @@ func SetupRoutes(r *gin.Engine) {
 			admin.PUT("/programs/:slug", handlers.UpdateProgram)
 			admin.DELETE("/programs/:slug", handlers.DeleteProgram)
 
-			// CRUD Beneficiary 
+			// CRUD Beneficiary (Create, Update, Delete - butuh login admin)
 			admin.GET("/beneficiaries", handlers.GetBeneficiariesAdmin)
 			admin.POST("/beneficiaries", handlers.CreateBeneficiary)
 			admin.PUT("/beneficiaries/:id", handlers.UpdateBeneficiary)
@@ -79,6 +88,8 @@ func SetupRoutes(r *gin.Engine) {
 			admin.GET("/transactions", handlers.GetTransactionsAdmin)
 			admin.POST("/transactions/:id/simulate-paid", handlers.SimulatePaymentSuccess)
 			admin.POST("/transactions/:id/simulate-failed", handlers.SimulatePaymentFailed)
+
+			// TODO: CRUD Endpoint lain akan ditambahkan di sini
 		}
 	}
 }
