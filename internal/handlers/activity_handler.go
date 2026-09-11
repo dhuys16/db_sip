@@ -19,12 +19,18 @@ import (
 // ActivityRequest dipakai untuk body Create & Update (multipart/form-data,
 // karena gambar dikirim langsung sebagai file dalam request yang sama)
 type ActivityRequest struct {
-	Title        string                `form:"title" binding:"required"`
-	Description  string                `form:"description" binding:"required"`
-	Division     string                `form:"division" binding:"required,oneof=lazsip sarsip"`
-	IsPinned     bool                  `form:"is_pinned"`
-	ActivityDate string                `form:"activity_date" binding:"required"` // contoh: "2026-09-10"
-	Image        *multipart.FileHeader `form:"image"`                            // opsional
+	Title            string                `form:"title" binding:"required"`
+	Description      string                `form:"description" binding:"required"`
+	Division         string                `form:"division" binding:"required,oneof=lazsip sarsip"`
+	Category         string                `form:"category"`          // opsional, bebas isi
+	Location         string                `form:"location"`          // opsional
+	Team             string                `form:"team"`              // opsional, misal "18 relawan & 6 personel SAR"
+	ItemsDistributed string                `form:"items_distributed"` // opsional
+	BeneficiaryCount int                   `form:"beneficiary_count"` // opsional, jumlah agregat penerima manfaat
+	CampaignID       *uint                 `form:"campaign_id"`       // opsional, nullable
+	IsPinned         bool                  `form:"is_pinned"`
+	ActivityDate     string                `form:"activity_date" binding:"required"` // contoh: "2026-09-10"
+	Image            *multipart.FileHeader `form:"image"`                            // opsional
 }
 
 // parseActivityDate mencoba beberapa format tanggal yang umum dipakai
@@ -43,6 +49,8 @@ func parseActivityDate(value string) (time.Time, error) {
 }
 
 // generateActivityCode bikin kode unik berformat kg001, kg002, dst.
+// Diambil dari angka terbesar pada activity yang terakhir dibuat (bukan hitung total baris),
+// supaya tetap aman walau ada activity yang sudah dihapus di tengah jalan.
 func generateActivityCode() (string, error) {
 	var lastActivity models.Activity
 	err := config.DB.Order("id desc").First(&lastActivity).Error
@@ -66,14 +74,19 @@ func generateActivityCode() (string, error) {
 	return fmt.Sprintf("kg%03d", nextNumber), nil
 }
 
-// GetActivitiesPublic - list semua activity untuk publik, bisa difilter ?division=lazsip atau ?division=sarsip
+// GetActivitiesPublic - list semua activity untuk publik, bisa difilter
+// ?division=lazsip|sarsip dan ?category=
 func GetActivitiesPublic(c *gin.Context) {
 	var activities []models.Activity
 	division := c.Query("division")
+	category := c.Query("category")
 
-	query := config.DB.Order("activity_date desc")
+	query := config.DB.Preload("Campaign").Order("activity_date desc")
 	if division != "" {
 		query = query.Where("division = ?", division)
+	}
+	if category != "" {
+		query = query.Where("category = ?", category)
 	}
 
 	if err := query.Find(&activities).Error; err != nil {
@@ -89,7 +102,7 @@ func GetActivityBySlugPublic(c *gin.Context) {
 	slug := c.Param("slug")
 
 	var activity models.Activity
-	if err := config.DB.Where("slug = ?", slug).First(&activity).Error; err != nil {
+	if err := config.DB.Preload("Campaign").Where("slug = ?", slug).First(&activity).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Activity tidak ditemukan"})
 		return
 	}
@@ -98,7 +111,8 @@ func GetActivityBySlugPublic(c *gin.Context) {
 }
 
 // CreateActivity - buat activity baru. Gambar (kalau ada) dikirim langsung
-// sebagai file di field "image".
+// sebagai file di field "image". Bisa dikaitkan opsional ke sebuah Campaign
+// (misal buat laporan penyaluran dari campaign tertentu).
 func CreateActivity(c *gin.Context) {
 	var req ActivityRequest
 	if err := c.ShouldBind(&req); err != nil {
@@ -110,6 +124,14 @@ func CreateActivity(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Format activity_date tidak valid, gunakan YYYY-MM-DD"})
 		return
+	}
+
+	var campaign models.Campaign
+	if req.CampaignID != nil {
+		if err := config.DB.First(&campaign, *req.CampaignID).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Campaign dengan ID tersebut tidak ditemukan"})
+			return
+		}
 	}
 
 	code, err := generateActivityCode()
@@ -128,18 +150,28 @@ func CreateActivity(c *gin.Context) {
 	}
 
 	activity := models.Activity{
-		Title:        req.Title,
-		Slug:         code,
-		Description:  req.Description,
-		Image:        imageURL,
-		Division:     req.Division,
-		IsPinned:     req.IsPinned,
-		ActivityDate: activityDate,
+		Title:            req.Title,
+		Slug:             code,
+		Description:      req.Description,
+		Image:            imageURL,
+		Division:         req.Division,
+		Category:         req.Category,
+		Location:         req.Location,
+		Team:             req.Team,
+		ItemsDistributed: req.ItemsDistributed,
+		BeneficiaryCount: req.BeneficiaryCount,
+		CampaignID:       req.CampaignID,
+		IsPinned:         req.IsPinned,
+		ActivityDate:     activityDate,
 	}
 
 	if err := config.DB.Create(&activity).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan activity"})
 		return
+	}
+
+	if req.CampaignID != nil {
+		activity.Campaign = campaign
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -171,9 +203,24 @@ func UpdateActivity(c *gin.Context) {
 		return
 	}
 
+	var campaign models.Campaign
+	if req.CampaignID != nil {
+		if err := config.DB.First(&campaign, *req.CampaignID).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Campaign dengan ID tersebut tidak ditemukan"})
+			return
+		}
+	}
+
+	// Kode (slug) tidak pernah berubah setelah dibuat, jadi tidak perlu di-generate ulang di sini.
 	activity.Title = req.Title
 	activity.Description = req.Description
 	activity.Division = req.Division
+	activity.Category = req.Category
+	activity.Location = req.Location
+	activity.Team = req.Team
+	activity.ItemsDistributed = req.ItemsDistributed
+	activity.BeneficiaryCount = req.BeneficiaryCount
+	activity.CampaignID = req.CampaignID
 	activity.IsPinned = req.IsPinned
 	activity.ActivityDate = activityDate
 
@@ -189,6 +236,10 @@ func UpdateActivity(c *gin.Context) {
 	if err := config.DB.Save(&activity).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update activity"})
 		return
+	}
+
+	if req.CampaignID != nil {
+		activity.Campaign = campaign
 	}
 
 	c.JSON(http.StatusOK, gin.H{

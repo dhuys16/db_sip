@@ -15,18 +15,30 @@ import (
 func GetCampaignsPublic(c *gin.Context) {
 	var campaigns []models.Campaign
 	division := c.Query("division") // lazsip atau sarsip
+	category := c.Query("category")
 
 	query := config.DB.Where("status = ?", "active")
 	if division != "" {
 		query = query.Where("division = ?", division)
 	}
+	if category != "" {
+		query = query.Where("category = ?", category)
+	}
 
 	// Mengambil data beserta relasi Program
 	query.Preload("Program").Find(&campaigns)
 
-	c.JSON(http.StatusOK, gin.H{"data": campaigns})
-}
+	// Bungkus tiap campaign dengan donor_count yang dihitung langsung dari Transaction
+	responses := make([]CampaignPublicResponse, len(campaigns))
+	for i, campaign := range campaigns {
+		responses[i] = CampaignPublicResponse{
+			Campaign:   campaign,
+			DonorCount: countCampaignDonors(campaign.ID),
+		}
+	}
 
+	c.JSON(http.StatusOK, gin.H{"data": responses})
+}
 // GetBlogsPublic mengambil artikel/berita
 func GetBlogsPublic(c *gin.Context) {
 	var blogs []models.Blog
