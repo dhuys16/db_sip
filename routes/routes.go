@@ -17,20 +17,23 @@ func SetupRoutes(r *gin.Engine) {
 				c.JSON(200, gin.H{"message": "API SIP Public OK"})
 			})
 
-			public.GET("/campaigns", handlers.GetCampaignsPublic)
 			public.GET("/blogs", handlers.GetBlogsPublic)
 			public.GET("/blogs/:slug", handlers.GetBlogBySlugPublic)
 			public.GET("/beneficiaries", handlers.GetBeneficiariesPublic)
-			public.GET("/activities", handlers.GetActivities)
-			public.GET("/activities/:slug", handlers.GetActivityBySlug)
+			public.GET("/beneficiaries/:id", handlers.GetBeneficiaryDetailPublic)
+			public.GET("/activities", handlers.GetActivitiesPublic)
+			public.GET("/activities/:slug", handlers.GetActivityBySlugPublic)
+			public.GET("/campaigns", handlers.GetCampaignsPublic)
+			public.GET("/campaigns/:slug", handlers.GetCampaignBySlugPublic)
+			public.GET("/programs", handlers.GetProgramsPublic)
+			public.GET("/programs/:slug", handlers.GetProgramBySlugPublic)
 		}
 
 		// 2. Endpoint Auth
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/login", handlers.AdminLogin)
-			auth.POST("/logout", handlers.AdminLogout)
-		}
+		}	
 
 		// 3. Endpoint Admin (Protected)
 		admin := v1.Group("/admin")
@@ -40,6 +43,7 @@ func SetupRoutes(r *gin.Engine) {
 				adminID, _ := c.Get("admin_id")
 				c.JSON(200, gin.H{"admin_id": adminID, "message": "Token valid!"})
 			})
+			admin.POST("/logout", handlers.AdminLogout)
 
 			// CRUD Activity
 			admin.POST("/activities", handlers.CreateActivity)
@@ -51,6 +55,23 @@ func SetupRoutes(r *gin.Engine) {
 			admin.POST("/blogs", handlers.CreateBlog)
 			admin.PUT("/blogs/:slug", handlers.UpdateBlog)
 			admin.DELETE("/blogs/:slug", handlers.DeleteBlog)
+
+			// CRUD Campaign (Create, Update, Delete - butuh login admin)
+			admin.POST("/campaigns", handlers.CreateCampaign)
+			admin.PUT("/campaigns/:slug", handlers.UpdateCampaign)
+			admin.DELETE("/campaigns/:slug", handlers.DeleteCampaign)
+
+			// CRUD Program (Create, Update, Delete - butuh login admin)
+			admin.GET("/programs", handlers.GetProgramsAdmin)
+			admin.POST("/programs", handlers.CreateProgram)
+			admin.PUT("/programs/:slug", handlers.UpdateProgram)
+			admin.DELETE("/programs/:slug", handlers.DeleteProgram)
+
+			// CRUD Beneficiary 
+			admin.GET("/beneficiaries", handlers.GetBeneficiariesAdmin)
+			admin.POST("/beneficiaries", handlers.CreateBeneficiary)
+			admin.PUT("/beneficiaries/:id", handlers.UpdateBeneficiary)
+			admin.DELETE("/beneficiaries/:id", handlers.DeleteBeneficiary)
 		}
 	}
 }

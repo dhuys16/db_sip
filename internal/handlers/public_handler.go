@@ -61,7 +61,7 @@ func GetBeneficiariesPublic(c *gin.Context) {
 		case "hidden":
 			beneficiaries[i].FullName = "Hamba Allah"
 			beneficiaries[i].Address = "Dirahasiakan"
-			beneficiaries[i].ImageURL = "" // Sembunyikan foto
+			beneficiaries[i].Image = "" // Sembunyikan foto
 		case "initials":
 			beneficiaries[i].FullName = maskNameWithInitials(beneficiaries[i].FullName)
 			// Alamat bisa di-masking sebagian jika perlu, untuk MVP disembunyikan

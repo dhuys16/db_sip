@@ -12,7 +12,7 @@ type Campaign struct {
 	CurrentAmount float64   `gorm:"type:decimal(15,2);default:0" json:"current_amount"`
 	Division      string    `gorm:"type:enum('lazsip', 'sarsip');not null" json:"division"`
 	Status        string    `gorm:"type:enum('active', 'completed', 'cancelled');default:'active'" json:"status"`
-	ImageURL      string    `gorm:"type:varchar(255)" json:"image_url"`
+	Image         string    `gorm:"column:image;type:varchar(255)" json:"image"`
 	IsPinned      bool      `gorm:"default:false" json:"is_pinned"`
 	KodeUnik      int       `gorm:"type:int;default:0" json:"kode_unik"` // Untuk transfer bank manual jika diperlukan
 	StartDate     time.Time `json:"start_date"`

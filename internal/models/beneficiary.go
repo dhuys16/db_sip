@@ -12,7 +12,7 @@ type Beneficiary struct {
 	DateReceived   time.Time `json:"date_received"`
 	PrivacyLevel   string    `gorm:"type:enum('public', 'initials', 'hidden');default:'hidden'" json:"privacy_level"`
 	Story          string    `gorm:"type:text" json:"story"`
-	ImageURL       string    `gorm:"type:varchar(255)" json:"image_url"`
+	Image          string    `gorm:"column:image;type:varchar(255)" json:"image"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
