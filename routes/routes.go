@@ -27,6 +27,8 @@ func SetupRoutes(r *gin.Engine) {
 			public.GET("/campaigns/:slug", handlers.GetCampaignBySlugPublic)
 			public.GET("/programs", handlers.GetProgramsPublic)
 			public.GET("/programs/:slug", handlers.GetProgramBySlugPublic)
+			public.POST("/donations", handlers.CreateDonation)
+			public.GET("/donations/:order_id", handlers.GetDonationStatusPublic)
 		}
 
 		// 2. Endpoint Auth
@@ -72,6 +74,11 @@ func SetupRoutes(r *gin.Engine) {
 			admin.POST("/beneficiaries", handlers.CreateBeneficiary)
 			admin.PUT("/beneficiaries/:id", handlers.UpdateBeneficiary)
 			admin.DELETE("/beneficiaries/:id", handlers.DeleteBeneficiary)
+
+			// Transaksi & simulasi pembayaran (sementara, sebelum payment gateway asli)
+			admin.GET("/transactions", handlers.GetTransactionsAdmin)
+			admin.POST("/transactions/:id/simulate-paid", handlers.SimulatePaymentSuccess)
+			admin.POST("/transactions/:id/simulate-failed", handlers.SimulatePaymentFailed)
 		}
 	}
 }

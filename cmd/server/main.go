@@ -6,6 +6,7 @@ import (
 
 	"db_sip/database/migrations"
 	"db_sip/internal/config"
+	"db_sip/internal/middleware"
 	"db_sip/routes"
 
 	"github.com/gin-gonic/gin"
@@ -25,8 +26,8 @@ func main() {
 	// Serve file hasil upload (gambar) supaya bisa diakses lewat /uploads/<nama_file>
 	r.Static("/uploads", "./uploads")
 
-	// Tambahkan middleware CORS jika frontend (Next.js) berjalan di port berbeda saat development
-	// r.Use(corsMiddleware())
+	// Aktifkan CORS supaya frontend (Next.js dkk) di domain/port berbeda bisa akses API ini
+	r.Use(middleware.CorsMiddleware())
 
 	// 4. Setup Routes (Publik, Admin, Webhook)
 	routes.SetupRoutes(r)
